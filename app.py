@@ -197,33 +197,6 @@ div.stButton > button[data-testid="stBaseButton-primary"]:hover {
     box-shadow: 0 6px 24px rgba(249,115,22,0.45) !important;
 }
 
-/* ---------- star buttons: small, inline, no box ---------- */
-div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button {
-    background: none !important;
-    border: none !important;
-    box-shadow: none !important;
-    padding: 0 !important;
-    margin: 0 !important;
-    min-height: 0 !important;
-    min-width: 0 !important;
-    line-height: 1 !important;
-    font-size: 1.25rem !important;
-    color: #555 !important;
-    transition: transform 0.12s !important;
-    width: auto !important;
-}
-div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button:hover {
-    transform: scale(1.3) !important;
-    background: none !important;
-    border: none !important;
-    box-shadow: none !important;
-    color: #fbbf24 !important;
-}
-div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button:focus {
-    box-shadow: none !important;
-    outline: none !important;
-}
-
 .vote-badge {
     display: inline-block;
     background: rgba(251,191,36,0.15); color: #fbbf24;
@@ -283,6 +256,8 @@ if "show_confetti" not in st.session_state:
     st.session_state.show_confetti = False
 if "total_submissions" not in st.session_state:
     st.session_state.total_submissions = 0
+if "vote_round" not in st.session_state:
+    st.session_state.vote_round = 0
 
 # Ensure new ads get added to existing state
 for ad in ADS:
@@ -344,22 +319,15 @@ with col_cards:
             # YouTube player (native Streamlit – renders properly)
             st.video(ad["youtube"])
 
-            # Clickable star rating – tight inline buttons
-            current = st.session_state.current_ratings[ad["id"]]
-            star_cols = st.columns([1, 1, 1, 1, 1, 5], gap="small")
-            for s in range(1, 6):
-                with star_cols[s - 1]:
-                    filled = s <= current
-                    label = "★" if filled else "☆"
-                    if st.button(
-                        label,
-                        key=f"star_{ad['id']}_{s}",
-                    ):
-                        if current == s:
-                            st.session_state.current_ratings[ad["id"]] = 0
-                        else:
-                            st.session_state.current_ratings[ad["id"]] = s
-                        st.rerun()
+            # Star rating (built-in Streamlit stars widget)
+            rating = st.feedback(
+                "stars",
+                key=f"stars_{ad['id']}_r{st.session_state.vote_round}",
+            )
+            if rating is not None:
+                st.session_state.current_ratings[ad["id"]] = rating + 1  # 0-indexed → 1-5
+            else:
+                st.session_state.current_ratings[ad["id"]] = 0
 
             st.html("<div style='height:6px'></div>")
 
@@ -431,6 +399,7 @@ with col_lb:
                 st.session_state.votes[ad["id"]].append(r)
         st.session_state.current_ratings = {ad["id"]: 0 for ad in ADS}
         st.session_state.total_submissions += 1
+        st.session_state.vote_round += 1
         st.session_state.show_confetti = True
         st.rerun()
 
@@ -439,3 +408,12 @@ with col_lb:
             '<p style="text-align:center;opacity:0.45;font-size:0.85rem;margin-top:6px;color:#e0e0e0;">'
             "Rate at least one ad to submit</p>"
         )
+
+    # Debug: clear all votes
+    st.html("<div style='height:20px'></div>")
+    if st.button("🗑️ Clear All Votes", use_container_width=True, key="clear_votes"):
+        st.session_state.votes = {ad["id"]: [] for ad in ADS}
+        st.session_state.current_ratings = {ad["id"]: 0 for ad in ADS}
+        st.session_state.total_submissions = 0
+        st.session_state.vote_round += 1
+        st.rerun()
