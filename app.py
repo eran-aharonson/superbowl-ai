@@ -1,5 +1,4 @@
 import streamlit as st
-import streamlit.components.v1 as components
 
 # ---------------------------------------------------------------------------
 # Page config
@@ -73,10 +72,9 @@ ADS = [
 ]
 
 # ---------------------------------------------------------------------------
-# Custom CSS – dark glassmorphism theme
+# Custom CSS – dark glassmorphism theme (injected via st.html)
 # ---------------------------------------------------------------------------
-st.markdown(
-    """
+CSS = """
 <style>
 /* ---------- global dark theme ---------- */
 .stApp {
@@ -113,38 +111,6 @@ st.markdown(
 .card-desc {
     font-size: 0.88rem; line-height: 1.4;
     opacity: 0.78; margin-bottom: 0;
-}
-
-/* ---------- video container ---------- */
-.video-wrapper {
-    position: relative; padding-bottom: 56.25%;
-    height: 0; overflow: hidden;
-    border-radius: 14px; margin-bottom: 10px;
-}
-.video-wrapper iframe {
-    position: absolute; top: 0; left: 0;
-    width: 100%; height: 100%;
-    border: none; border-radius: 14px;
-}
-
-/* ---------- star rating (HTML/JS clickable) ---------- */
-.star-rating {
-    display: flex;
-    gap: 2px;
-    margin: 6px 0 12px 0;
-}
-.star-rating .star {
-    font-size: 1.3rem;
-    cursor: pointer;
-    transition: transform 0.12s;
-    user-select: none;
-    color: #555;
-}
-.star-rating .star.active {
-    color: #fbbf24;
-}
-.star-rating .star:hover {
-    transform: scale(1.25);
 }
 
 /* ---------- leaderboard ---------- */
@@ -211,7 +177,7 @@ st.markdown(
     -webkit-text-fill-color: transparent;
     margin-bottom: 4px;
 }
-.hero p { opacity: 0.6; font-size: 1.05rem; }
+.hero p { opacity: 0.6; font-size: 1.05rem; color: #e0e0e0; }
 
 /* ---------- submit button ---------- */
 div.stButton > button[kind="primary"],
@@ -229,32 +195,6 @@ div.stButton > button[kind="primary"]:hover,
 div.stButton > button[data-testid="stBaseButton-primary"]:hover {
     transform: translateY(-2px) !important;
     box-shadow: 0 6px 24px rgba(249,115,22,0.45) !important;
-}
-div.stButton > button[kind="primary"]:active,
-div.stButton > button[data-testid="stBaseButton-primary"]:active {
-    transform: scale(0.97) !important;
-}
-
-.vote-badge {
-    display: inline-block;
-    background: rgba(251,191,36,0.15); color: #fbbf24;
-    border-radius: 999px; padding: 4px 14px;
-    font-size: 0.85rem; font-weight: 600; margin-top: 2px;
-}
-
-/* ---------- confetti ---------- */
-.confetti-canvas {
-    position: fixed; top: 0; left: 0;
-    width: 100vw; height: 100vh;
-    pointer-events: none; z-index: 9999;
-}
-
-/* ---------- responsive ---------- */
-@media (max-width: 768px) {
-    .hero h1 { font-size: 1.7rem; }
-    .glass-card { padding: 16px 12px 12px; }
-    .card-title { font-size: 1rem; }
-    .lb-card { padding: 16px 12px 12px; }
 }
 
 /* ---------- star buttons: small, inline, no box ---------- */
@@ -284,21 +224,31 @@ div[data-testid="stHorizontalBlock"] div[data-testid="stButton"] button:focus {
     outline: none !important;
 }
 
-/* Override for the Submit button (primary) so it keeps its style */
-div.stButton > button[kind="primary"],
-div.stButton > button[data-testid="stBaseButton-primary"] {
-    font-size: 1.1rem !important;
-    padding: 14px 36px !important;
-    min-height: unset !important;
+.vote-badge {
+    display: inline-block;
+    background: rgba(251,191,36,0.15); color: #fbbf24;
+    border-radius: 999px; padding: 4px 14px;
+    font-size: 0.85rem; font-weight: 600; margin-top: 2px;
 }
 
-.stSelectbox label, .stRadio label, .stSlider label {
-    color: #e0e0e0 !important;
+/* ---------- confetti ---------- */
+.confetti-canvas {
+    position: fixed; top: 0; left: 0;
+    width: 100vw; height: 100vh;
+    pointer-events: none; z-index: 9999;
+}
+
+/* ---------- responsive ---------- */
+@media (max-width: 768px) {
+    .hero h1 { font-size: 1.7rem; }
+    .glass-card { padding: 16px 12px 12px; }
+    .card-title { font-size: 1rem; }
+    .lb-card { padding: 16px 12px 12px; }
 }
 </style>
-""",
-    unsafe_allow_html=True,
-)
+"""
+
+st.html(CSS)
 
 # ---------------------------------------------------------------------------
 # Confetti JS
@@ -356,76 +306,18 @@ def star_display(rating: float) -> str:
     return "★" * full + ("½" if half else "") + "☆" * (5 - full - (1 if half else 0))
 
 
-def youtube_embed_url(url: str) -> str:
-    video_id = url.split("v=")[-1].split("&")[0]
-    return f"https://www.youtube.com/embed/{video_id}"
-
-
-def star_rating_component(ad_id: str, current: int) -> int:
-    """Render an inline clickable star rating using HTML/JS via components."""
-    stars_html = ""
-    for i in range(1, 6):
-        cls = "star active" if i <= current else "star"
-        stars_html += f'<span class="{cls}" data-val="{i}">★</span>'
-
-    html = f"""
-    <div id="sr-{ad_id}" class="star-rating" style="display:flex;gap:2px;margin:4px 0 8px 0;">
-        {stars_html}
-    </div>
-    <style>
-        body {{ margin: 0; background: transparent; overflow: hidden; }}
-        .star-rating .star {{
-            font-size: 1.3rem; cursor: pointer;
-            transition: transform 0.12s, color 0.15s;
-            user-select: none; color: #555;
-        }}
-        .star-rating .star.active {{ color: #fbbf24; }}
-        .star-rating .star:hover {{ transform: scale(1.25); }}
-    </style>
-    <script>
-        const stars = document.querySelectorAll('#sr-{ad_id} .star');
-        stars.forEach(s => {{
-            s.addEventListener('click', () => {{
-                const val = parseInt(s.dataset.val);
-                // Send the value back to Streamlit
-                window.parent.postMessage({{
-                    type: 'streamlit:setComponentValue',
-                    value: val,
-                    dataType: 'json',
-                }}, '*');
-            }});
-            s.addEventListener('mouseenter', () => {{
-                const val = parseInt(s.dataset.val);
-                stars.forEach((ss, idx) => {{
-                    ss.style.color = idx < val ? '#fbbf24' : '#555';
-                }});
-            }});
-        }});
-        document.getElementById('sr-{ad_id}').addEventListener('mouseleave', () => {{
-            stars.forEach(ss => {{
-                ss.style.color = ss.classList.contains('active') ? '#fbbf24' : '#555';
-            }});
-        }});
-    </script>
-    """
-    return html
-
-
 # ---------------------------------------------------------------------------
 # Header
 # ---------------------------------------------------------------------------
-st.markdown(
-    """
+st.html("""
 <div class="hero">
     <h1>🏈 Super Bowl LX Ad Rater</h1>
     <p>Rate every AI ad from the Big Game — who won the Super Bowl of AI?</p>
 </div>
-""",
-    unsafe_allow_html=True,
-)
+""")
 
 if st.session_state.show_confetti:
-    st.markdown(CONFETTI_JS, unsafe_allow_html=True)
+    st.html(CONFETTI_JS)
     st.session_state.show_confetti = False
 
 # ---------------------------------------------------------------------------
@@ -440,32 +332,21 @@ with col_cards:
     card_cols = st.columns(2)
     for idx, ad in enumerate(ADS):
         with card_cols[idx % 2]:
-            embed = youtube_embed_url(ad["youtube"])
-            st.markdown(
-                f"""
+            st.html(f"""
 <div class="glass-card">
     <div class="card-icon">{ad['icon']}</div>
     <div class="card-company">{ad['company']}</div>
     <div class="card-title">{ad['title']}</div>
     <div class="card-desc">{ad['description']}</div>
 </div>
-""",
-                unsafe_allow_html=True,
-            )
+""")
 
-            # Embedded YouTube player
-            st.markdown(
-                f"""
-<div class="video-wrapper">
-    <iframe src="{embed}" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowfullscreen></iframe>
-</div>
-""",
-                unsafe_allow_html=True,
-            )
+            # YouTube player (native Streamlit – renders properly)
+            st.video(ad["youtube"])
 
-            # Clickable star rating – inline buttons, no box
+            # Clickable star rating – tight inline buttons
             current = st.session_state.current_ratings[ad["id"]]
-            star_cols = st.columns([1, 1, 1, 1, 1, 3], gap="small")
+            star_cols = st.columns([1, 1, 1, 1, 1, 5], gap="small")
             for s in range(1, 6):
                 with star_cols[s - 1]:
                     filled = s <= current
@@ -473,7 +354,6 @@ with col_cards:
                     if st.button(
                         label,
                         key=f"star_{ad['id']}_{s}",
-                        help=f"{s} star{'s' if s > 1 else ''}",
                     ):
                         if current == s:
                             st.session_state.current_ratings[ad["id"]] = 0
@@ -481,7 +361,7 @@ with col_cards:
                             st.session_state.current_ratings[ad["id"]] = s
                         st.rerun()
 
-            st.markdown("<div style='height:6px'></div>", unsafe_allow_html=True)
+            st.html("<div style='height:6px'></div>")
 
 # ---------------------------------------------------------------------------
 # Leaderboard
@@ -498,7 +378,6 @@ with col_lb:
     voted.sort(key=lambda x: (x[1], x[2]), reverse=True)
     sorted_ads = [ad for ad, _, _ in voted] + unvoted
 
-    num_voted = len(voted)
     rank_medals = ["🥇", "🥈", "🥉"] + [f"{i}." for i in range(4, len(ADS) + 1)]
     rank_classes = ["gold", "silver", "bronze"] + ["" for _ in range(len(ADS) - 3)]
 
@@ -510,7 +389,6 @@ with col_lb:
         stars_str = star_display(avg) if has_votes else "☆☆☆☆☆"
         avg_str = f"{avg:.1f}" if has_votes else "—"
         votes_str = f"{vote_count} vote{'s' if vote_count != 1 else ''}" if has_votes else "no votes"
-        # Only apply medal highlighting to voted ads
         cls = rank_classes[rank] if has_votes and rank < 3 else ""
 
         lb_rows += f"""
@@ -524,28 +402,24 @@ with col_lb:
         </div>
         """
 
-    st.markdown(
-        f"""
+    st.html(f"""
 <div class="lb-card">
     <div class="lb-title">🏆 Live Leaderboard</div>
     {lb_rows}
 </div>
-""",
-        unsafe_allow_html=True,
-    )
+""")
 
-    st.markdown("<div style='height:14px'></div>", unsafe_allow_html=True)
+    st.html("<div style='height:14px'></div>")
 
     # Total votes badge
     if st.session_state.total_submissions:
-        st.markdown(
+        st.html(
             f'<div style="text-align:center"><span class="vote-badge">'
             f'🗳️ {st.session_state.total_submissions} total '
             f'submission{"s" if st.session_state.total_submissions != 1 else ""}'
-            f'</span></div>',
-            unsafe_allow_html=True,
+            f'</span></div>'
         )
-        st.markdown("<div style='height:10px'></div>", unsafe_allow_html=True)
+        st.html("<div style='height:10px'></div>")
 
     # Submit button
     has_any_rating = any(v > 0 for v in st.session_state.current_ratings.values())
@@ -561,8 +435,7 @@ with col_lb:
         st.rerun()
 
     if not has_any_rating:
-        st.markdown(
-            '<p style="text-align:center;opacity:0.45;font-size:0.85rem;margin-top:6px;">'
-            "Rate at least one ad to submit</p>",
-            unsafe_allow_html=True,
+        st.html(
+            '<p style="text-align:center;opacity:0.45;font-size:0.85rem;margin-top:6px;color:#e0e0e0;">'
+            "Rate at least one ad to submit</p>"
         )
